@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sunway College - What To Eat Wheel</title>
+  <style>
+    :root {
+      --primary: #d9232a; /* Sunway Red */
+      --dark: #1e293b;
+      --bg: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      color: var(--primary);
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .container {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: center;
+      }
+    }
+
+    /* Wheel Section */
+    .wheel-container {
+      position: relative;
+      width: 340px;
+      height: 340px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid var(--primary);
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    .spin-btn {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--primary);
+      border: 4px solid var(--primary);
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+      z-index: 5;
+    }
+
+    .spin-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* Controls & Food List */
+    .controls {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .controls h2 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    .add-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .food-list {
+      list-style: none;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .food-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .modal h3 {
+      font-size: 1rem;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .modal .result-name {
+      font-size: 1.8rem;
+      color: var(--primary);
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .close-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Sunway College Food Wheel</h1>
+    <p>Can't decide what to eat around campus? Let the wheel decide!</p>
+  </header>
+
+  <div class="container">
+    <div class="wheel-container">
+      <div class="pointer"></div>
+      <canvas id="wheelCanvas" width="340" height="340"></canvas>
+      <button class="spin-btn" id="spinBtn">SPIN</button>
+    </div>
+
+    <div class="controls">
+      <h2>Food Options</h2>
+      <div class="input-group">
+        <input type="text" id="foodInput" placeholder="Add new restaurant...">
+        <button class="add-btn" id="addBtn">Add</button>
+      </div>
+      <ul class="food-list" id="foodList"></ul>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>You should eat at:</h3>
+      <div class="result-name" id="resultName">--</div>
+      <button class="close-btn" id="closeBtn">Sounds Good!</button>
+    </div>
+  </div>
+
+  <script>
+    const defaultPlaces = [
+      "Sunway Campus Cafeteria",
+      "Nadayu 28 Food Court",
+      "Oasis Food Court (Pyramid)",
+      "Rock Cafe",
+      "Garage 51",
+      "After Black",
+      "Uncle Don's",
+      "FamilyMart"
+    ];
+
+    const colors = [
+      '#e11d48', '#2563eb', '#059669', '#d97706',
+      '#7c3aed', '#db2777', '#0891b2', '#475569'
+    ];
+
+    let places = [...defaultPlaces];
+    let startAngle = 0;
+    let isSpinning = false;
+
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const spinBtn = document.getElementById('spinBtn');
+    const foodInput = document.getElementById('foodInput');
+    const addBtn = document.getElementById('addBtn');
+    const foodListEl = document.getElementById('foodList');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const resultName = document.getElementById('resultName');
+    const closeBtn = document.getElementById('closeBtn');
+
+    function drawWheel() {
+      const numSlices = places.length;
+      if (numSlices === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const arc = (2 * Math.PI) / numSlices;
+      const radius = canvas.width / 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numSlices; i++) {
+        const angle = startAngle + i * arc;
+        
+        // Slice background
+        ctx.beginPath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, angle, angle + arc);
+        ctx.lineTo(radius, radius);
+        ctx.fill();
+
+        // Label Text
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px sans-serif";
+        ctx.fillText(places[i], radius - 15, 4);
+        ctx.restore();
+      }
+    }
+
+    function renderList() {
+      foodListEl.innerHTML = '';
+      places.forEach((place, index) => {
+        const li = document.createElement('li');
+        li.className = 'food-item';
+        li.innerHTML = `
+          <span>${place}</span>
+          <button class="delete-btn" onclick="removePlace(${index})">&times;</button>
+        `;
+        foodListEl.appendChild(li);
+      });
+      drawWheel();
+    }
+
+    function removePlace(index) {
+      if (places.length <= 2) {
+        alert("Keep at least 2 food options for the wheel!");
+        return;
+      }
+      places.splice(index, 1);
+      renderList();
+    }
+
+    addBtn.addEventListener('click', () => {
+      const val = foodInput.value.trim();
+      if (val) {
+        places.push(val);
+        foodInput.value = '';
+        renderList();
+      }
+    });
+
+    foodInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addBtn.click();
+    });
+
+    spinBtn.addEventListener('click', () => {
+      if (isSpinning || places.length === 0) return;
+
+      isSpinning = true;
+      const spinDuration = 4000; // 4 seconds
+      const randomRotations = 5 + Math.random() * 5; 
+      const totalRotation = randomRotations * 2 * Math.PI;
+      
+      const initialAngle = startAngle;
+      const startTime = performance.now();
+
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        if (elapsed < spinDuration) {
+          // Easing out cubic
+          const progress = elapsed / spinDuration;
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          startAngle = initialAngle + totalRotation * easeOut;
+          drawWheel();
+          requestAnimationFrame(animate);
+        } else {
+          startAngle = (initialAngle + totalRotation) % (2 * Math.PI);
+          drawWheel();
+          isSpinning = false;
+          showWinner();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    });
+
+    function showWinner() {
+      const numSlices = places.length;
+      const arc = (2 * Math.PI) / numSlices;
+      
+      // Pointer is at 12 o'clock (-90 deg or 1.5 * PI rads)
+      const normalizedAngle = (1.5 * Math.PI - (startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const winnerIndex = Math.floor(normalizedAngle / arc) % numSlices;
+      
+      resultName.textContent = places[winnerIndex];
+      modalOverlay.style.display = 'flex';
+    }
+
+    closeBtn.addEventListener('click', () => {
+      modalOverlay.style.display = 'none';
+    });
+
+    // Initial Render
+    renderList();
+  </script>
+</body>
+</html>
